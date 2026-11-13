@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phasmo Pro Coach</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="toast-container"></div>
+
+  <header id="top-bar" class="hidden">
+    <div class="hud-info"><strong>Lvl:</strong> <span id="hud-level">1</span></div>
+    <div class="hud-info"><strong>Mode:</strong> <span id="hud-mode">-</span></div>
+    <div class="hud-info"><strong>Map:</strong> <span id="hud-map">-</span></div>
+    <div class="hud-info" id="setup-timer">No setup phase</div>
+    <div class="hud-info" id="session-timer">Time: 0:00</div>
+    <div class="hud-status" id="hud-status">Phase 1: Find the Room</div>
+    <button onclick="endRun()" class="btn-danger">End Run</button>
+  </header>
+
+  <div class="drawer-tab left" onclick="toggleDrawer('suspect')" id="tab-suspect">❯</div>
+  <div class="drawer-tab right" onclick="toggleDrawer('behavior')" id="tab-behavior">❮</div>
+
+  <div id="suspect-drawer" class="side-drawer left">
+    <div class="drawer-header">
+      <h3 class="panel-title" style="margin:0; border:none;">👻 Suspects (<span id="ghost-count">0</span>)</h3>
+      <button class="close-btn" onclick="toggleDrawer('suspect')">✕</button>
+    </div>
+    <div id="ghost-list" class="ghost-list"></div>
+  </div>
+
+  <div id="behavior-drawer" class="side-drawer right">
+    <div class="drawer-header">
+      <h3 class="panel-title" style="margin:0; border:none;">🔬 Behavior Tests</h3>
+      <button class="close-btn" onclick="toggleDrawer('behavior')">✕</button>
+    </div>
+    <div id="behavior-grid" class="behavior-grid"></div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <!-- LEFT COLUMN -->
+    <aside class="col-left">
+      <div class="panel">
+        <h3 class="panel-title">📖 Evidence</h3>
+        <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:10px;">Click: Found. Click twice: Excluded. Click 3rd: Reset.</p>
+        <div id="evidence-grid" class="evidence-grid"></div>
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <button class="btn-chat" style="flex:1; padding:6px; font-size:0.75rem;" onclick="resetEvidence()">♻️ Reset Evidence</button>
+          <button class="btn-chat" style="flex:1; padding:6px; font-size:0.75rem;" onclick="resetTests()">♻️ Reset Tests</button>
+        </div>
+      </div>
+
+      <div class="panel" id="status-panel">
+        <h3 class="panel-title">📊 Live Status</h3>
+        <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
+          <span>Sanity:</span>
+          <span id="sanity-val" style="color:#4ade80;">100%</span>
+        </div>
+        <input type="range" id="sanity-slider" min="0" max="100" value="100" style="width:100%; accent-color:#2dd4bf;" oninput="updateSanityVisual(this.value)">
+        <button id="hunt-btn" class="btn-hunt" onclick="toggleHunt()">🔴 START HUNT</button>
+
+        <div id="hunt-protocol" class="hidden" style="margin-top:10px; border:1px solid #ef4444; padding:10px; border-radius:6px; background:rgba(239,68,68,0.1);">
+          <p style="color:#ef4444; font-weight:bold; font-size:0.9rem; margin-bottom:5px;">HUNT ACTIVE</p>
+          <p id="hunt-timer" style="font-family:monospace; color:#fbbf24; margin-bottom:8px;">Hunt: 0:00</p>
+          <div style="display:flex; flex-direction:column; gap:5px; font-size:0.8rem;">
+            <label><input type="checkbox" id="hunt-chk-33" onchange="quickHuntLog(33, this)"> Visible blinks (Oni)</label>
+            <label><input type="checkbox" id="hunt-chk-28" onchange="quickHuntLog(28, this)"> Invisible blinks (Phantom)</label>
+            <label><input type="checkbox" id="hunt-chk-32" onchange="quickHuntLog(32, this)"> Fast far, slow close (Deogen)</label>
+            <label><input type="checkbox" id="hunt-chk-25" onchange="quickHuntLog(25, this)"> Shapeshifted (Obake)</label>
+            <label><input type="checkbox" id="hunt-chk-26" onchange="quickHuntLog(26, this)"> DOTS only on camera (Goryo)</label>
+            <label><input type="checkbox" id="hunt-chk-34" onchange="quickHuntLog(34, this)"> Aging - starts fast (Thaye)</label>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER COLUMN: CAROUSEL -->
+    <main class="col-center">
+      <div class="panel chat-panel">
+        <h3 class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🧠 Coach Feed</span>
+          <span style="font-size:0.65rem; color:#64748b; font-weight:normal;">Shortcuts: 1-7 ev, H hunt, T tests, G ghosts</span>
+        </h3>
+        
+        <div id="chat-stream" class="chat-stream"></div>
+        <div class="chat-pagination" id="chat-pagination"></div>
+        <div class="chat-input-area" id="chat-input-area"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT COLUMN -->
+    <aside class="col-right">
+      <div class="panel">
+        <h3 class="panel-title">📋 Active Objectives</h3>
+        <div id="active-objectives" class="active-objectives"></div>
+      </div>
+
+      <div class="panel">
+        <h3 class="panel-title">🎒 Equipment Tracker</h3>
+        <p style="font-size:0.75rem; color:#94a3b8; margin-bottom:10px;">Click: Van ➔ Hand ➔ Room ➔ Van</p>
+        <div id="equipment-tracker" class="equipment-tracker"></div>
+      </div>
+
+      <div class="panel">
+        <h3 class="panel-title">💀 Cursed Item</h3>
+        <select id="cursed-select" onchange="handleCursedItem(this.value)" style="width:100%; padding:8px; background:#0f172a; color:#fff; border:1px solid #334155; border-radius:6px;">
+          <option value="None">Not found yet</option>
+          <option value="Ouija Board">Ouija Board</option>
+          <option value="Voodoo Doll">Voodoo Doll</option>
+          <option value="Monkey Paw">Monkey Paw</option>
+          <option value="Music Box">Music Box</option>
+          <option value="Haunted Mirror">Haunted Mirror</option>
+          <option value="Tarot Cards">Tarot Cards</option>
+          <option value="Summoning Circle">Summoning Circle</option>
+        </select>
+        <div id="cursed-info" style="margin-top:10px; font-size:0.8rem; color:#94a3b8; display:none; border-left:2px solid #2dd4bf; padding-left:10px;"></div>
+      </div>
+
+      <div class="panel">
+        <h3 class="panel-title">📜 Recent Runs</h3>
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- SETUP MODAL -->
+  <div id="setup-modal" class="setup-modal">
+    <div class="setup-content" style="width: 500px; border-color: #2dd4bf;">
+      <h2 style="color: #2dd4bf; margin-bottom: 20px; text-align:left; font-weight: 800;">New Hunt Setup</h2>
+
+      <div class="setup-row">
+        <label>Map / Level</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="number" id="setup-level" value="15" min="1" max="9999" style="width: 80px;">
+          <select id="setup-map" onchange="updateMapPreview()" style="flex-grow: 1;">
+            <option value="6 Tanglewood Drive">6 Tanglewood Drive</option>
+            <option value="13 Willow Street">13 Willow Street</option>
+            <option value="42 Edgefield Road">42 Edgefield Road</option>
+            <option value="10 Ridgeview Court">10 Ridgeview Court</option>
+            <option value="Grafton Farmhouse">Grafton Farmhouse</option>
+            <option value="Camp Woodwind">Camp Woodwind</option>
+            <option value="Nell's Diner">Nell's Diner</option>
+            <option value="Point Hope">Point Hope</option>
+            <option value="Point Hope Restricted">Point Hope (Restricted)</option>
+            <option value="Bleasdale Farmhouse">Bleasdale Farmhouse</option>
+            <option value="Maple Lodge Campsite">Maple Lodge Campsite</option>
+            <option value="Prison">Prison</option>
+            <option value="Prison Restricted">Prison (Restricted)</option>
+            <option value="Sunny Meadows Restricted">Sunny Meadows (Restricted)</option>
+            <option value="Sunny Meadows Mental Institution">Sunny Meadows</option>
+            <option value="Brownstone High School">Brownstone High School</option>
+            <option value="Brownstone High School Restricted">Brownstone High School (Restricted)</option>
+          </select>
+        </div>
+        <small id="map-preview" style="color:#64748b; margin-top:4px;"></small>
+      </div>
+
+      <div class="setup-row">
+        <label>Game Mode</label>
+        <select id="setup-mode" onchange="handleModeChange()">
+          <optgroup label="Standard">
+            <option value="Amateur">Amateur</option>
+            <option value="Intermediate" selected>Intermediate</option>
+            <option value="Professional">Professional</option>
+            <option value="Nightmare">Nightmare</option>
+            <option value="Insanity">Insanity</option>
+          </optgroup>
+          <optgroup label="Weekly">
+            <option value="Weekly: Lights Out!">Weekly: Lights Out!</option>
+            <option value="Weekly: Speed Demons">Weekly: Speed Demons</option>
+            <option value="Weekly: Detectives Only">Weekly: Detectives Only</option>
+            <option value="Weekly: Missed Delivery">Weekly: Missed Delivery</option>
+            <option value="Weekly: The Apocalypse">Weekly: The Apocalypse</option>
+          </optgroup>
+        </select>
+        <small id="mode-preview" style="color:#64748b; margin-top:4px;"></small>
+      </div>
+
+      <div class="setup-row">
+        <label>Ghost Gender (Board)</label>
+        <select id="setup-gender">
+          <option value="Unknown">Unknown</option>
+          <option value="Male">Male (rules out Banshee / Dayan)</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+
+      <div class="setup-row">
+        <label>Select 3 Objectives (<span id="objective-count">0</span>/3)</label>
+        <div id="setup-objectives" class="setup-objectives-list"></div>
+      </div>
+
+       <button onclick="openLoadoutSelection(false)" id="init-coach-btn" class="btn-chat primary" style="width:100%; margin-top:20px; padding: 14px; font-size: 1.1rem; background: #00d2ff; color: #000;" disabled>Initialize Coach</button>
+      
+      <!-- Butonul PRO (Trebuie să aibă textul diferit și onclick diferit) -->
+      <button onclick="startProMode()" id="pro-mode-btn" class="btn-chat" style="width:100%; margin-top:10px; padding: 10px; font-size: 0.9rem; background: transparent; border: 1px solid #fbbf24; color: #fbbf24;" disabled>⚡ Pro Mode (Skip Setup)</button>
+    </div>
+  </div>
+
+  <script src="ghost-data.js"></script>
+  <script src="map-data.js"></script>
+  <script src="game-modes.js"></script>
+  <script src="equipment-data.js"></script>
+  <script src="objective-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
